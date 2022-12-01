@@ -10,45 +10,52 @@ setwd("/1data/mariusW/PotatoTools_GWAS/")
 ?set.K
 ?GWASpoly
 ?read.GWASpoly
+?write.GWASpoly
 
 #2)
-genofile <- file("inputfiles/geno_tetraploids.csv")
-phenofile <- file("inputfiles/AEM_Resequencing2.csv")
+genofile <- file("inputfiles/geno_tetraploids_Chr01.csv")
+phenofile <- file("inputfiles/AEM_table_reseq_renamed.csv")
 
-#3) #20 trait in AEM file; genotype and phenotype samle names have to be equal
-data <- read.GWASpoly(ploidy=4, pheno.file=phenofile, geno.file=genofile, format="numeric", n.traits=20, delim=",")
+#3) #26 trait in AEM file; genotype and phenotype sample names have to be equal
+data <- read.GWASpoly(ploidy=4, pheno.file=phenofile, geno.file=genofile, format="numeric", n.traits=26, delim=",")
 
 #4) Population structure
-data.loco <- set.K(data,LOCO=TRUE,n.core=8)
-data.original <- set.K(data,LOCO=FALSE,n.core=8)
+#data.loco <- set.K(data,LOCO=TRUE,n.core=10)
+
+data.original <- set.K(data,LOCO=FALSE,n.core=10)
 
 #5) Marker curation
 N <- 100 #Population size
 params <- set.params(geno.freq = 1 - 5/N, fixed = "env", fixed.type = "factor") #Ask BST
 
 #6)
-data.loco.scan <- GWASpoly(data=data.loco,models=c("additive"), traits=c("AUF"), n.core=8) #without params=params
-data.original.scan <- GWASpoly(data.original,models=c("additive"), traits=c("AUF"), n.core=8) #additive or 1-dom
+#data.loco.scan <- GWASpoly(data=data.loco,models=c("additive"), traits=c("AUF"), n.core=8) #without params=params
+
+data.original.scan <- GWASpoly(data.original,models=c("additive","1-dom","2-dom"), traits=c("AUF"), n.core=10) #additive or 1-dom
 
 #7)
 
 #8) Filter - threshold
-data2 <- set.threshold(data.loco.scan,method="Bonferroni",level=0.05)
+data2 <- set.threshold(data.original.scan,method="Bonferroni",level=0.05)
 #data2 <- set.threshold(data.loco.scan,method="M.eff",level=0.05)
 
-?manhattan.plot
-
 #9) Manhattan plot
-p <- manhattan.plot(data2,traits="AUF", models = "additive")
-p + theme(axis.text.x = element_text(angle=90,vjust=0.5))
+#p <- manhattan.plot(data2,traits="AUF", models = "additive")
+#p + theme(axis.text.x = element_text(angle=90,vjust=0.5))
 
-#manhattan.plot(data2,traits="AUF",chrom="Chr01")
-#ggsave("DWSte.png", p, bg = "transparent") Found somewhere
+p <- manhattan.plot(data2,traits="AUF",chrom="Chr01")
+ggsave("test.png", p, bg = "transparent") #Found somewhere
+
+#p <- LD.plot(data2, max.loci=1000)
 
 #get QTL
-qtl <- get.QTL(data=data2,traits="AUF",models="additive",bp.window=5e6)
+qtl <- get.QTL(data=data2,traits="AUF",models=c("additive","1-dom","2-dom"),bp.window=5e6)
+write.csv(qtl,file = "sig_qtls_AUF.csv", sep = "\t")
+
+#write output GWAS
+#write.GWASpoly(data=data2, trait="AUF", filename="test_GWAS_Chr01_AUF_effects.csv", what = "effects", delim = "\t")
 
 #???
 #knitr::kable(qtl)
-#fit.ans <- fit.QTL(data=data2,trait="vine.maturity",qtl=qtl[,c("Marker","Model")],fixed=data.frame(Effect="env",Type="factor"))
+#fit.ans <- fit.QTL(data=data2,trait="AUF",qtl=qtl[,c("Marker","Model")],fixed=data.frame(Effect="env",Type="factor"))
 #knitr::kable(fit.ans,digits=3)
