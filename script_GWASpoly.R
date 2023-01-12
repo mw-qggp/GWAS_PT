@@ -13,7 +13,7 @@ setwd("/1data/mariusW/PotatoTools_GWAS/")
 ?write.GWASpoly
 
 #2)
-genofile <- file("inputfiles/geno_tetraploids_Chr01.csv")
+genofile <- file("inputfiles/geno_tetraploids_Chr02.csv") #chr02 for testing script (11.01.2023) #K matrix all chromosomes
 phenofile <- file("inputfiles/AEM_table_reseq_renamed.csv")
 
 #3) #26 trait in AEM file; genotype and phenotype sample names have to be equal
@@ -24,14 +24,25 @@ data <- read.GWASpoly(ploidy=4, pheno.file=phenofile, geno.file=genofile, format
 
 data.original <- set.K(data,LOCO=FALSE,n.core=10)
 
+#To use it in GWAS script for each chromosome
+save(data.original, file = "kmatrix.R")
+
+#testing script 11.01.2023
+load("kmatrix.R")
+
+#PCA matrix?
+
 #5) Marker curation
-N <- 100 #Population size
-params <- set.params(geno.freq = 1 - 5/N, fixed = "env", fixed.type = "factor") #Ask BST
+#N <- 100 #Population size
+#params <- set.params(geno.freq = 1 - 5/N, fixed = "env", fixed.type = "factor", n.PC = 2) #Parameters: PC1 + PC2 as fixed effect (SNP matrix)
+
+#testing script 11.01.2023
+params <- set.params(n.PC = 2)
 
 #6)
-#data.loco.scan <- GWASpoly(data=data.loco,models=c("additive"), traits=c("AUF"), n.core=8) #without params=params
+#without params=params; no LOCO
 
-data.original.scan <- GWASpoly(data.original,models=c("additive","1-dom","2-dom"), traits=c("AUF"), n.core=10) #additive or 1-dom
+data.original.scan <- GWASpoly(data.original,models=c("additive", "general"), traits=c("AUF"), n.core=10,params=params) #additive and general
 
 #7)
 
@@ -49,11 +60,14 @@ ggsave("test.png", p, bg = "transparent") #Found somewhere
 #p <- LD.plot(data2, max.loci=1000)
 
 #get QTL
-qtl <- get.QTL(data=data2,traits="AUF",models=c("additive","1-dom","2-dom"),bp.window=5e6)
+qtl <- get.QTL(data=data2,traits="AUF",models=c("additive","general"),bp.window=5e6)
 write.csv(qtl,file = "sig_qtls_AUF.csv", sep = "\t")
 
 #write output GWAS
-#write.GWASpoly(data=data2, trait="AUF", filename="test_GWAS_Chr01_AUF_effects.csv", what = "effects", delim = "\t")
+write.GWASpoly(data=data2, trait="AUF", filename="test_GWAS_AUF_effects.csv", what = "effects", delim = "\t")
+write.GWASpoly(data=data2, trait="AUF", filename="test_GWAS_AUF_scores.csv", what = "scores", delim = "\t")
+
+?write.GWASpoly
 
 #???
 #knitr::kable(qtl)
